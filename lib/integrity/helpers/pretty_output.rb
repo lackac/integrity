@@ -9,14 +9,22 @@ module Integrity
       end
 
       def bash_color_codes(string)
-        string.gsub("\e[0m", '</span>').
-          gsub("\e[31m", '<span class="color31">').
-          gsub("\e[32m", '<span class="color32">').
-          gsub("\e[33m", '<span class="color33">').
-          gsub("\e[34m", '<span class="color34">').
-          gsub("\e[35m", '<span class="color35">').
-          gsub("\e[36m", '<span class="color36">').
-          gsub("\e[37m", '<span class="color37">')
+        open_tags = 0
+        string.gsub(/\e\[([0139])(\d?)m/) do
+          control = $1.to_i
+          color = $2 == "" ? nil : $2.to_i
+          if control == 0
+            close_count = open_tags
+            open_tags = 0
+            "</span>" * close_count
+          else
+            classes = []
+            classes << "bold" if control == 1 || control == 9
+            classes << "color3#{color}" if control == 3 || control == 9
+            open_tags += 1
+            %{<span class="#{classes.join(" ")}">}
+          end
+        end
       end
 
       def pretty_date(date_time)
