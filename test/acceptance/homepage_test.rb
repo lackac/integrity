@@ -25,13 +25,20 @@ class HomepageTest < Test::Unit::AcceptanceTestCase
 
     visit "/"
 
-    assert_have_tag("li[@class~=success]",  :content => "successfully")
-    assert_have_tag("li[@class~=failed]",   :content => "and failed")
+    # TODO
+    assert_have_tag("li[@class~=success]")
+    assert_have_tag("li[@class~=failed]")
+
     assert_have_tag("li[@class~=blank]",    :content => "Never built yet")
     assert_have_tag("li[@class~=building]", :content => "Building!")
+
+    header "HTTP_IF_MODIFIED_SINCE", last_response["Last-Modified"]
+    visit "/"
+
+    assert_equal 304, last_response.status
   end
 
-  scenario "a user clicking through a link on the home page for a public project arrives at the project page" do
+  scenario "Clicking on a project from the homepage" do
     Project.gen(:my_test_project, :public => true)
 
     visit "/"
@@ -39,8 +46,8 @@ class HomepageTest < Test::Unit::AcceptanceTestCase
 
     assert_have_tag("h1", :content => "My Test Project")
 
-    # He can then go back to the project listing
     click_link "projects"
+
     assert_have_tag("a", :content => "My Test Project")
   end
 

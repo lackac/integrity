@@ -7,9 +7,8 @@ class BrowseBuildsTest < Test::Unit::AcceptanceTestCase
     So I can see the history of a project
   EOS
 
-  scenario "Browsing to a project with not builds" do
+  scenario "Browsing to a project with no builds" do
     Project.gen(:blank, :name => "Integrity")
-
 
     visit "/integrity"
 
@@ -31,8 +30,13 @@ class BrowseBuildsTest < Test::Unit::AcceptanceTestCase
     within("ul#previous_builds") do
       assert_have_tag("li.pending", :count => 2)
       assert_have_tag("li.failed",  :count => 2)
-      assert_have_tag("li.success", :count => 2)
+      assert_have_tag("li.success", :count => 3)
     end
+
+    header "HTTP_IF_MODIFIED_SINCE", last_response["Last-Modified"]
+    visit "/"
+
+    assert_equal 304, last_response.status
   end
 
   scenario "Looking for details on the last build" do
@@ -52,17 +56,38 @@ class BrowseBuildsTest < Test::Unit::AcceptanceTestCase
     assert_have_tag("span.who",     :content => "by: Nicolas Sanguinetti")
     assert_have_tag("span.when",    :content => "Dec 15th")
     assert_have_tag("pre.output",   :content => "This is the build output")
+
+    header "HTTP_IF_MODIFIED_SINCE", last_response["Last-Modified"]
+    visit "/"
+
+    assert_equal 304, last_response.status
   end
 
-  scenario "Browsing to an individual build pages" do
+  scenario "Browsing to an individual build page" do
     Project.gen(:integrity, :builds => [
       Build.gen(:successful, :commit => Commit.gen(:identifier => "87e673a")),
-      Build.gen(:successful, :commit => Commit.gen(:identifier => "7fee3f0"))
+      Build.gen(:pending, :commit => Commit.gen(:identifier => "7fee3f0")),
+      Build.gen(:pending)
     ])
 
     visit "/integrity"
     click_link(/Build 87e673a/)
 
     assert_have_tag("h1", :content => "Built 87e673a successfully")
+    assert_have_tag("h2", :content => "Build Output:")
+    assert_have_tag("button", :content => "Rebuild")
+
+    visit "/integrity"
+    click_link(/Build 7fee3f0/)
+
+    assert_have_tag("h1", :content => "This commit hasn't been built yet")
+    assert_have_no_tag("h2", :content => "Build Output:")
+    assert_have_tag("button", :content => "Rebuild")
+
+    visit "/integrity"
+    header "HTTP_IF_MODIFIED_SINCE", last_response["Last-Modified"]
+    visit "/integrity"
+
+    assert_equal 304, last_response.status
   end
 end

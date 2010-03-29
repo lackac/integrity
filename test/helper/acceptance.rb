@@ -1,4 +1,3 @@
-require "storyteller"
 require "webrat"
 require "rack/test"
 require "webmock/test_unit"
@@ -8,8 +7,15 @@ require "helper/acceptance/repo"
 
 Rack::Test::DEFAULT_HOST.replace("www.example.com")
 
+# TODO
+Webrat::Session.class_eval {
+  def redirect?
+    [301, 302, 303, 307].include?(response_code)
+  end
+}
+
 module AcceptanceHelper
-  include IntegrityTest
+  include TestHelper
 
   def git_repo(name)
     GitRepo.new(name.to_s).tap { |repo|
@@ -27,12 +33,29 @@ module AcceptanceHelper
     def AcceptanceHelper.logged_in; false; end
     rack_test_session.header("Authorization", nil)
   end
+
+  # thanks http://github.com/ichverstehe
+  def mock_socket
+    socket, server = MockSocket.new, MockSocket.new
+    socket.in, server.out = IO.pipe
+    server.in, socket.out = IO.pipe
+
+    stub(TCPSocket).open(anything, anything) {socket}
+    server
+  end
+
+  class MockSocket
+    attr_accessor :in, :out
+    def gets() @in.gets end
+    def puts(m) @out.puts(m) end
+    def eof?() true end
+    def close() end
+  end
 end
 
-class Test::Unit::AcceptanceTestCase < Test::Unit::TestCase
+class Test::Unit::AcceptanceTestCase < IntegrityTest
   include FileUtils
   include AcceptanceHelper
-  include Test::Storyteller
 
   include Rack::Test::Methods
   include Webrat::Methods
@@ -44,19 +67,22 @@ class Test::Unit::AcceptanceTestCase < Test::Unit::TestCase
 
   attr_reader :app
 
-  before(:all) do
+  def self.story(*a); end
+
+  class << self
+    alias_method :scenario, :test
+  end
+
+  setup do
     Integrity::App.set(:environment, :test)
     Webrat.configure { |c| c.mode = :rack }
     Integrity.builder = lambda { |build| Builder.new(build).build }
     @app = Integrity.app
-  end
-
-  before(:each) do
     Integrity.directory.mkdir
     log_out
   end
 
-  after(:each) do
+  teardown do
     Integrity.directory.rmtree
   end
 end

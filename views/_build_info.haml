@@ -1,10 +1,9 @@
 %h1&= build.human_status
 
-- if !build.pending? && !build.building? && build.failed?
-  %form{ :action => build_path(build), :method => :post }
-    %p.submit
-      %button{ :type => :submit, :title => "Rebuild this commit" }<
-        Rebuild
+%form{ :action => build_path(build), :method => :post }
+  %p.submit
+    %button{ :type => :submit, :title => "Rebuild this commit" }<
+      Rebuild
 
 %blockquote
   %p&= build.commit.message
@@ -18,7 +17,8 @@
     %span.what<
       &== commit: #{build.commit.identifier}
 
-%h2 Build Output:
-%pre.output
-  :preserve
-    #{bash_color_codes h(build.output)}
+- if build.completed?
+  %h2 Build Output:
+  %pre.output
+    :preserve
+      #{bash_color_codes h(build.output)}

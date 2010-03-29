@@ -12,8 +12,8 @@ module Integrity
   Project.fixture do
     { :name    => (name = unique { /\w+/.gen }),
       :uri     => "git://github.com/#{/\w+/.gen}/#{name}.git",
-      :branch  => %w[master test-refactoring lh-34].pick,
-      :command => %w[rake make ant test.xml].pick,
+      :branch  => Randgen.word,
+      :command => Randgen.word,
       :public  => true }
   end
 
@@ -41,10 +41,6 @@ module Integrity
       3.of { Build.gen(:successful) })
   end
 
-  Project.fixture(:svn) do
-    Project.gen_attrs(:my_test_project).update(:scm => "svn", :branch => "")
-  end
-
   Project.fixture(:blank) do
     Project.gen_attrs.update(:builds => [])
   end
@@ -67,10 +63,6 @@ module Integrity
   Project.fixture(:building) do
     Project.gen_attrs.update(:builds => 3.of{Build.gen} +
       1.of{Build.gen(:building)})
-  end
-
-  Project.fixture(:blank) do
-    Project.gen_attrs.update(:builds => [])
   end
 
   Build.fixture do
